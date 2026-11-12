@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniCode AI</title>
+<style>
+:root{--bg:#0b0f19;--panel:#202a39;--field:#374354;--purple:#5144ed;--text:#f7f8fc;--muted:#cbd2df}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:28px 4.8% 40px}
+h1{font-size:clamp(2rem,4vw,2.6rem);margin:0 0 26px;font-weight:800}
+h1 span{margin-right:8px}
+h3{font-size:1.25rem;margin:0 0 28px}
+.intro{font-size:1.08rem;line-height:1.65;margin:0 0 28px}
+.school{font-size:1.12rem;font-weight:750;margin-bottom:28px}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
+.panel{background:var(--panel);padding:16px 18px;border-radius:7px;min-width:0}
+.label{display:inline-block;background:var(--purple);padding:8px 10px;border-radius:9px;font-weight:750;font-size:1.15rem;margin-bottom:12px}
+textarea{width:100%;resize:vertical;border:0;border-radius:7px;background:var(--field);color:white;padding:16px;font:inherit;font-size:1.08rem;min-height:118px;outline:2px solid transparent}
+textarea:focus{outline-color:#8178ff}
+#output{min-height:310px;white-space:pre-wrap;line-height:1.7}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+button{border:0;border-radius:9px;padding:16px 12px;font:inherit;font-size:1.1rem;font-weight:750;color:white;background:#4b5565;cursor:pointer}
+button:hover{filter:brightness(1.12)}
+button.primary{background:var(--purple)}
+button.help{grid-column:1/-1}
+.examples{margin-top:22px}
+.examples h3{margin:0 0 12px;font-size:1.05rem}
+.example-list{display:flex;flex-wrap:wrap;gap:8px}
+.example{background:#303b4d;border:1px solid #536078;border-radius:20px;padding:8px 12px;font-size:.9rem}
+.example:hover{background:#46536a}
+footer{margin-top:26px;color:var(--muted);font-size:.92rem;line-height:1.6}
+hr{border:0;border-top:1px solid #394354;margin:22px 0}
+@media(max-width:800px){body{padding:22px 16px}.layout{grid-template-columns:1fr}.actions{gap:10px}.panel{padding:14px}#output{min-height:220px}}
+</style>
+</head>
+<body>
+<h1><span>🤖</span>MiniCode AI</h1>
+<h3>Your Simple-English Programming Assistant</h3>
+<p class="intro">Welcome! Enter a programming or mathematical instruction in simple English. MiniCode AI will interpret it and display the result.</p>
+<div class="school">An Educational Project By The Bandhan School Chakdaha</div>
+
+<main class="layout">
+  <section>
+    <div class="panel">
+      <div class="label">Enter Your Instruction</div>
+      <textarea id="instruction" placeholder="Example: Add 10 and 20" aria-label="Enter your instruction"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="run">▶ Run Instruction</button>
+      <button id="clear">▤ Clear</button>
+      <button class="help" id="help">❓ Help</button>
+    </div>
+    <div class="examples">
+      <h3>💡 Try These Examples</h3>
+      <div class="example-list" id="examples"></div>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="label">💻 MiniCode AI Response</div>
+    <textarea id="output" readonly placeholder="Your result will appear here..."></textarea>
+  </section>
+</main>
+<footer>
+  <hr>
+  <strong>How it works:</strong> MiniCode AI uses JavaScript, pattern matching, and natural-language intent recognition to process instructions.
+  <br><strong>Note:</strong> This educational demonstration uses predefined rules. It is not a large language model and may not understand every possible sentence.
+</footer>
+<script>
+const $ = id => document.getElementById(id);
+const examples = [
+"Add 10 and 20","Subtract 5 from 20","Multiply 6 and 7","Divide 20 by 4",
+"Is 17 an odd number?","Find the greatest among 12, 45, 23",
+"Show the multiplication table of 5","Find even numbers from 1 to 20",
+"Find odd numbers from 1 to 30","List numbers from 1 to 50"
+];
+examples.forEach(value => {
+  const b=document.createElement("button"); b.className="example"; b.textContent=value;
+  b.addEventListener("click",()=>{$("instruction").value=value;$("instruction").focus()});
+  $("examples").appendChild(b);
+});
+function extractNumbers(text){
+  const matches=text.match(/(?<![A-Za-z])[-+]?\d+(?:\.\d+)?/g)||[];
+  return matches.map(x=>x.includes(".")?Number.parseFloat(x):Number.parseInt(x,10)).filter(Number.isFinite);
+}
+function fmt(v){return Number.isInteger(v)?String(v):String(Number(v.toFixed(10)));}
+function getRange(text){
+  const patterns=[/\bfrom\s+(-?\d+)\s+to\s+(-?\d+)\b/i,/\bbetween\s+(-?\d+)\s+and\s+(-?\d+)\b/i,/\b(-?\d+)\s*(?:\.\.|to)\s*(-?\d+)\b/i];
+  for(const p of patterns){const m=text.match(p);if(m)return [Number(m[1]),Number(m[2])];}
+  return null;
+}
+function interpretInstruction(raw){
+ const text=String(raw||"").toLowerCase().trim();
+ if(!text)return "Please type an instruction first.";
+ if(["multiplication table","table of","times table"].some(x=>text.includes(x))){
+   const nums=extractNumbers(text);if(!nums.length)return "Please include a number. Example: Show the table of 5.";
+   const n=Math.trunc(nums[0]);let end=10;const m=text.match(/\b(?:up to|till|until)\s+(\d+)\b/);
+   if(m)end=Math.max(1,Math.min(30,Number(m[1])));
+   const lines=Array.from({length:end},(_,i)=>`${n} × ${i+1} = ${fmt(n*(i+1))}`);
+   return "MULTIPLICATION TABLE\n\n"+lines.join("\n");
+ }
+ const nr=getRange(text);
+ if(text.includes("even")&&nr){const [a,b]=nr,lo=Math.min(a,b),hi=Math.max(a,b);if(hi-lo>5000)return "Please use a range of 5,000 or fewer.";const vals=[];for(let i=lo;i<=hi;i++)if(i%2===0)vals.push(i);return `EVEN NUMBERS FROM ${lo} TO ${hi}\n\n${vals.length?vals.join(", "):"None"}`;}
+ if(text.includes("odd")&&nr){const [a,b]=nr,lo=Math.min(a,b),hi=Math.max(a,b);if(hi-lo>5000)return "Please use a range of 5,000 or fewer.";const vals=[];for(let i=lo;i<=hi;i++)if(i%2!==0)vals.push(i);return `ODD NUMBERS FROM ${lo} TO ${hi}\n\n${vals.length?vals.join(", "):"None"}`;}
+ if((text.includes("even")||text.includes("odd"))&&["is ","check","number","whether","tell me"].some(x=>text.includes(x))){
+   const nums=extractNumbers(text);if(nums.length){const n=Math.trunc(nums[0]);return `RESULT\n\n${n} is an ${n%2===0?"EVEN":"ODD"} number.`;}
+ }
+ if(["greatest","largest","biggest","maximum","max number"].some(x=>text.includes(x))){
+   const nums=extractNumbers(text);if(nums.length<2)return "Please provide at least two numbers.\n\nExample: Find the greatest among 12, 45, 23.";
+   return `RESULT\n\nThe greatest number is ${fmt(Math.max(...nums))}.`;
+ }
+ const nums=extractNumbers(text);
+ if(["divide","division","divided by","quotient"].some(x=>text.includes(x))||text.includes("/")){
+   if(nums.length<2)return "Please provide two numbers. Example: Divide 20 by 4.";
+   if(nums[1]===0)return "Division by zero is undefined. Please use a non-zero divisor.";
+   return `DIVISION RESULT\n\n${fmt(nums[0])} ÷ ${fmt(nums[1])} = ${fmt(nums[0]/nums[1])}`;
+ }
+ if(["multiply","multiplication","product","times"].some(x=>text.includes(x))||text.includes("*")){
+   if(nums.length<2)return "Please provide two numbers. Example: Multiply 6 and 7.";
+   return `MULTIPLICATION RESULT\n\n${fmt(nums[0])} × ${fmt(nums[1])} = ${fmt(nums[0]*nums[1])}`;
+ }
+ if(["subtract","minus","difference","take away"].some(x=>text.includes(x))||(text.includes("-")&&!text.startsWith("find even")&&!text.startsWith("find odd"))){
+   if(nums.length<2)return "Please provide two numbers. Example: Subtract 5 from 20.";
+   let a=nums[0],b=nums[1];const m=text.match(/\bsubtract\s+(-?\d+(?:\.\d+)?)\s+from\s+(-?\d+(?:\.\d+)?)/);
+   if(m){a=Number(m[2]);b=Number(m[1]);}
+   return `SUBTRACTION RESULT\n\n${fmt(a)} − ${fmt(b)} = ${fmt(a-b)}`;
+ }
+ if(["add","addition","sum","plus","total"].some(x=>text.includes(x))||text.includes("+")){
+   if(nums.length<2)return "Please provide at least two numbers. Example: Add 10 and 20.";
+   return `ADDITION RESULT\n\n${fmt(nums[0])} + ${fmt(nums[1])} = ${fmt(nums[0]+nums[1])}`;
+ }
+ if(nr&&["count","numbers","list","range"].some(x=>text.includes(x))){
+   const [a,b]=nr,lo=Math.min(a,b),hi=Math.max(a,b);if(hi-lo>500)return "Please use a range of 500 or fewer for this list.";
+   return `NUMBERS FROM ${lo} TO ${hi}\n\n${Array.from({length:hi-lo+1},(_,i)=>lo+i).join(", ")}`;
+ }
+ if(["help","what can you do","examples"].some(x=>text.includes(x))){
+   return "WELCOME TO MINICODE AI!\n\nTry these instructions:\n\n"+examples.map((x,i)=>`${i+1}. ${x}`).join("\n");
+ }
+ return "SORRY! I COULDN'T RECOGNIZE THAT INSTRUCTION.\n\nPlease try another instruction or click an example below.\n\nExample: Add 10 and 20.";
+}
+function run(){ $("output").value=interpretInstruction($("instruction").value); }
+$("run").addEventListener("click",run);
+$("instruction").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();run();}});
+$("clear").addEventListener("click",()=>{$("instruction").value="";$("output").value="";$("instruction").focus();});
+$("help").addEventListener("click",()=>{$("output").value=interpretInstruction("help");});
+</script>
+</body>
+</html>
